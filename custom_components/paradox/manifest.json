@@ -1,0 +1,9 @@
+{
+    "domain": "paradox",
+    "name": "Paradox",
+    "config_flow": true,
+    "documentation": "https://github.com/hallenmaia/ha-paradox",
+    "dependencies": ["ffmpeg"],
+    "requirements": ["pypdxapi==0.1.1", "m3u8==0.7.1"],
+    "codeowners": ["@hallenmaia"]
+}

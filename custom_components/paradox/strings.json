@@ -1,0 +1,59 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Paradox module setup.",
+        "description": "By clicking submit, we will search your network for compatible Paradox modules."
+      },
+      "device": {
+        "title": "Select a Paradox module.",
+        "data": {
+          "name": "Select discovered Paradox module"
+        }
+      },
+      "manual_input": {
+        "title": "Configure Paradox module.",
+        "data": {
+          "type": "Model",
+          "host": "Host",
+          "port": "Port",
+          "password": "Module password"
+        }
+      },
+      "auth": {
+        "title": "Configure authentication.",
+        "data": {
+          "password": "Module password",
+          "username": "Username",
+          "usercode": "User password"
+        }
+      }
+    },
+    "abort": {
+      "already_configured_device": "Device is already configured",
+      "unknown_reason": "Error setting up device. Check logs for more information."
+    },
+    "error": {
+      "invalid_auth": "Invalid authentication",
+      "cannot_connect": "Failed to connect"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Device Options",
+        "data": {
+          "domains": "Domains",
+          "timeout": "Request Timeout (seconds)"
+        }
+      },
+      "camera": {
+        "title": "Camera Options",
+        "data": {
+          "channel_type": "Quality",
+          "extra_arguments": "Extra FFMPEG arguments"
+        }
+      }
+    }
+  }
+}
