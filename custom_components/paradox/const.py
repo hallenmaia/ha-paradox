@@ -5,13 +5,18 @@ MANUFACTURER = 'Paradox, Inc'
 # Configuration
 CONF_MODEL = 'type'
 CONF_USERCODE = 'usercode'
+CONF_MODULE = 'module'
 
 # Defaults
 DEFAULT_PORT = 80
 DEFAULT_PASSWORD = 'paradox'
 DEFAULT_USERNAME = 'master'
 DEFAULT_USERCODE = '1234'
-DEFAULT_TIMEOUT = 5
+DEFAULT_TIMEOUT = 10
+DEFAULT_SCAN_INTERVAL = 30
+
+# Alarm Panel
+CONF_ALARM_CONTROL_PANEL = 'alarm_control_panel'
 
 # Camera
 CONF_CAMERA = 'camera'

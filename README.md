@@ -1,3 +1,4 @@
+![Validate with hassfest](https://github.com/hallenmaia/ha-paradox/workflows/Validate%20with%20hassfest/badge.svg)
 # Paradox - Home Assistant
 Paradox Security System integration for Home Assistant.
 

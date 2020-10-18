@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (CONF_NAME, CONF_HOST, CONF_PORT, CONF_TIMEOUT, CONF_USERNAME, CONF_PASSWORD,
                                  CONF_DEVICE, CONF_DOMAIN, CONF_DOMAINS)
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import (MANUFACTURER, CONF_MODEL, CONF_USERCODE, DEFAULT_TIMEOUT,
                     CONF_CAMERA, CONF_CAMERA_PROFILE, DEFAULT_CAMERA_PROFILE, CAMERA_BANDWIDTH)
@@ -35,7 +36,9 @@ class ParadoxDevice:
     """Manages an Paradox device."""
     device = None
     _available: bool = False
-    _info: DeviceInfo = None
+    _device_info: DeviceInfo = None
+    # Alarm
+    _panel_info: DeviceInfo = None
     # Camera
     _last_stream_source = None
 
@@ -86,9 +89,14 @@ class ParadoxDevice:
         return self._available
 
     @property
-    def info(self) -> DeviceInfo:
+    def device_info(self) -> DeviceInfo:
         """ Return module info."""
-        return self._info
+        return self._device_info
+
+    @property
+    def panel_info(self) -> DeviceInfo:
+        """ Return module info."""
+        return self._panel_info
 
     @property
     def platforms(self) -> List:
@@ -101,9 +109,9 @@ class ParadoxDevice:
 
         try:
             self.device = get_device_cls(self.hass, self.model, self.host, self.port, self.password, timeout=timeout)
-            await self.device.login(self.usercode, self.username)
+            data = await self.device.login(self.usercode, self.username)
 
-            self._info = DeviceInfo(
+            self._device_info = DeviceInfo(
                 manufacturer=MANUFACTURER,
                 model=self.model,
                 name=self.name,
@@ -111,6 +119,15 @@ class ParadoxDevice:
                 serial=self.device.serial,
                 mac=None
             )
+            self._panel_info = DeviceInfo(
+                manufacturer=MANUFACTURER,
+                model='',
+                name='Paradox Control Panel',
+                sw_version=f"{data['ParadoxCP']['Version']}.{data['ParadoxCP']['Revision']}",
+                serial=data['ParadoxCP']['SerialNo'],
+                mac=None
+            )
+
             self._available = True
 
         except (ClientConnectionError, TimeoutError):
@@ -180,6 +197,67 @@ class ParadoxDevice:
 
         return ''
 
+    async def async_update_alarm_panel(self) -> dict:
+        """ Fetch alarm panel data
+
+        :return: dict data from module
+        """
+        try:
+            return await self.device.pingstatus()
+
+        except (ClientConnectionError, TimeoutError) as error:
+            _LOGGER.error(
+                "Couldn't fetch alarm panel data from module '%s'.",
+                self.name
+            )
+            raise UpdateFailed(error) from error
+        except ParadoxModuleError as error:
+            self._available = False
+            _LOGGER.error(
+                "Couldn't fetch alarm panel data from module '%s', please verify that the credentials are correct. ",
+                self.name
+            )
+            raise UpdateFailed(error) from error
+        except NotImplementedError as error:
+            _LOGGER.exception(
+                "Couldn't fetch alarm panel data from module '%s'. Unexpected exception.",
+                self.name
+            )
+            raise UpdateFailed(error) from error
+
+    async def async_areacontrol(self, area_commands: List[dict]) -> bool:
+        """ Control Areas
+
+        :param area_commands: AreaID
+        :return: True/False
+        """
+        try:
+            if not self.device.is_authenticated():
+                await self.device.login(username=self.username, usercode=self.usercode)
+
+            await self.device.areacontrol(area_commands)
+            return True
+
+        except (ClientConnectionError, TimeoutError):
+            _LOGGER.exception(
+                "Couldn't send command to alarm panel from module '%s'.",
+                self.name
+            )
+        except ParadoxModuleError:
+            self._available = False
+            _LOGGER.error(
+                "Couldn't send command to alarm panel from module '%s', "
+                "please verify that the credentials are correct. ",
+                self.name
+            )
+        except NotImplementedError:
+            _LOGGER.exception(
+                "Couldn't send command to alarm panel from module '%s'. Unexpected exception.",
+                self.name
+            )
+
+        return False
+
     async def async_rod(self, state: int) -> bool:
         """ Start/Stop record on demand
 
@@ -188,14 +266,12 @@ class ParadoxDevice:
         """
         try:
             if not self.device.is_authenticated():
-                self._last_stream_source = None
                 await self.device.login(username=self.username, usercode=self.usercode)
 
             data = await self.device.rod(action=state)
             return data['ResultCode'] == 33816578
 
         except (ClientConnectionError, TimeoutError):
-            self._last_stream_source = None
             _LOGGER.error(
                 "Couldn't set record on demand from camera '%s'.",
                 self.name

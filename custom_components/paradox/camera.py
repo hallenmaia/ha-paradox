@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Callable, List
+from typing import Callable, List, cast
 from haffmpeg.camera import CameraMjpeg
 from haffmpeg.tools import IMAGE_JPEG, ImageFrame
 from homeassistant.components.camera import SUPPORT_STREAM, Camera
@@ -11,7 +11,7 @@ from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
 
-from .const import DOMAIN, CONF_CAMERA
+from .const import DOMAIN, CONF_MODULE, CONF_CAMERA
 from .device import ParadoxDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,10 +22,10 @@ async def async_setup_entry(
         config_entry: ConfigEntry,
         async_add_entities: Callable[[List[Entity], bool], None]) -> None:
     """Set up the Paradox camera video stream."""
-    camera: ParadoxDevice = hass.data[DOMAIN][config_entry.unique_id]
+    module = cast(ParadoxDevice, hass.data[DOMAIN][config_entry.unique_id][CONF_MODULE])
 
     async_add_entities(
-        [ParadoxCameraEntity(camera)], False
+        [ParadoxCameraEntity(module)], False
     )
 
 
@@ -39,7 +39,7 @@ class ParadoxCameraEntity(Camera):
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
-        return f"{DOMAIN}-{self.device.info.serial}-{CONF_CAMERA}".lower()
+        return f"{DOMAIN}-{self.device.device_info.serial}-{CONF_CAMERA}".lower()
 
     @property
     def name(self) -> str:
@@ -50,19 +50,19 @@ class ParadoxCameraEntity(Camera):
     def device_info(self):
         """Return a device description for device registry."""
         device_info = {
-            "manufacturer": self.device.info.manufacturer,
-            "model": self.device.info.model,
-            "name": self.device.info.name,
-            "sw_version": self.device.info.sw_version,
+            "name": self.device.device_info.name,
             "identifiers": {
                 # MAC address is not always available
-                (DOMAIN, self.device.info.mac or self.device.info.serial)
+                (DOMAIN, self.device.device_info.mac or self.device.device_info.serial)
             },
+            "manufacturer": self.device.device_info.manufacturer,
+            "model": self.device.device_info.model,
+            "sw_version": self.device.device_info.sw_version,
         }
 
-        if self.device.info.mac:
+        if self.device.device_info.mac:
             device_info["connections"] = {
-                (CONNECTION_NETWORK_MAC, self.device.info.mac)
+                (CONNECTION_NETWORK_MAC, self.device.device_info.mac)
             }
 
         return device_info
@@ -80,12 +80,12 @@ class ParadoxCameraEntity(Camera):
     @property
     def brand(self):
         """Return the camera brand."""
-        return self.device.info.manufacturer
+        return self.device.device_info.manufacturer
 
     @property
     def model(self):
         """Return the camera model."""
-        return self.device.info.model
+        return self.device.device_info.model
 
     async def stream_source(self):
         """Return the source of the stream."""
